@@ -2,7 +2,7 @@
 	"manifest_version": 2,
 	"name": "Prakerja Gratis Bookmarker",
 	"description": "Bookmarker tools to seed prakerjagratis.com",
-	"version": "1",
+	"version": "1.0.0",
 	"author": "BukanStafsus",
 	"browser_action": {
 		"default_title": "Prakerja Gratis",
@@ -10,7 +10,9 @@
 	},
 	"permissions": [
 		"activeTab",
-		"tabs"
+		"tabs",
+		"storage",
+		"https://prakerjagratis.com/"
 	],
 	"icons": {
 		"16": "logo192.png",
