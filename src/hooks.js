@@ -53,7 +53,7 @@ export const useAuth = () => {
     }
   }, []);
 
-  const callback = React.useCallback(({ username, password }) => {
+  const login = React.useCallback(({ username, password }) => {
     setLoading(true);
     api
       .post('/wp-json/jwt-auth/v1/token', {
@@ -92,7 +92,19 @@ export const useAuth = () => {
       });
   }, []);
 
-  return [isAuthorized, callback, { loading, error }];
+  const logout = React.useCallback(() => {
+    if (CHROME_ENV) {
+      chrome.storage.sync.remove(TOKEN_KEY, () => {
+        console.info('Token has been saved!');
+      });
+    } else {
+      window.localStorage.removeItem(TOKEN_KEY);
+    }
+
+    setAuth(false);
+  }, []);
+
+  return [isAuthorized, { login, logout }, { loading, error }];
 };
 
 export const useMetaCrawler = (callback) => {

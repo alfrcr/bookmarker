@@ -18,15 +18,15 @@ const Warning = () => (
 
 const App = () => {
   const isYoutubePage = useYoutubeChecker();
-  const [isAuthorized, authenticate, state] = useAuth();
+  const [isAuthorized, { login, logout }, state] = useAuth();
 
   return (
     <React.Fragment>
       {isYoutubePage ? (
         isAuthorized ? (
-          <Main />
+          <Main logout={logout} />
         ) : (
-          <Login authenticate={authenticate} state={state} />
+          <Login authenticate={login} state={state} />
         )
       ) : (
         <Warning />

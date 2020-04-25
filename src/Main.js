@@ -19,13 +19,13 @@ import { Container, Form, InputBlock, CloseButton } from './components';
 import { useMetaCrawler, useCategories, useTags, useBookmark } from './hooks';
 import { DEV_PAGE } from './constants';
 
-const Main = () => {
+const Main = ({ logout }) => {
   const [currentURL, setCurrentURL] = React.useState(DEV_PAGE);
   const [currentTitle, setCurrentTitle] = React.useState(document.title);
   const [currentAuthor, setCurrentAuthor] = React.useState('');
   const [currentAuthorURL, setCurrentAuthorURL] = React.useState('');
   const [currentContent, setCurrentContent] = React.useState('');
-  const [selectedCategory, setSelectedCategory] = React.useState(null);
+  const [selectedCategory, setSelectedCategory] = React.useState('');
   const [selectedTags, setSelectedTags] = React.useState([]);
   const [
     categories,
@@ -54,7 +54,7 @@ const Main = () => {
   const tagNames = tags.map((t) => t.name);
   const onSubmit = (data) => {
     bookmark(data).then(() => {
-      setSelectedCategory(null);
+      setSelectedCategory('');
       setSelectedTags([]);
     });
   };
@@ -116,11 +116,11 @@ const Main = () => {
           </InputBlock>
 
           <textarea
-            fullWidth
             name="content"
             label="Content"
             style={{ display: 'none' }}
             value={currentContent}
+            readOnly
             ref={register({ required: true })}
           />
 
@@ -198,6 +198,18 @@ const Main = () => {
             : 'Bookmark'}
         </Button>
       </Form>
+
+      <Button
+        fullWidth
+        type="submit"
+        variant="contained"
+        color="secondary"
+        style={{ marginTop: 16 }}
+        onClick={() => logout()}
+        disabled={bookmarkLoading || bookmarkSuccess}
+      >
+        Logout
+      </Button>
 
       {bookmarkSuccess ? (
         <Typography variant="body1" style={{ marginTop: 8, color: 'green' }}>
