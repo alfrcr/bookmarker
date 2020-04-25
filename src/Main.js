@@ -10,33 +10,59 @@ import {
   MenuItem,
   Typography,
   Divider,
+  FormHelperText,
 } from '@material-ui/core';
 import { Autocomplete } from '@material-ui/lab';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 
-import { Container, Form, InputBlock } from './helpers';
-import { useMetaCrawler } from './hooks';
+import { Container, Form, InputBlock, CloseButton } from './components';
+import { useMetaCrawler, useCategories, useTags, useBookmark } from './hooks';
 import { DEV_PAGE } from './constants';
 
-function Main() {
+const Main = () => {
   const [currentURL, setCurrentURL] = React.useState(DEV_PAGE);
   const [currentTitle, setCurrentTitle] = React.useState(document.title);
   const [currentAuthor, setCurrentAuthor] = React.useState('');
-  const [currentDesc, setCurrentDesc] = React.useState('');
+  const [currentAuthorURL, setCurrentAuthorURL] = React.useState('');
+  const [currentContent, setCurrentContent] = React.useState('');
+  const [selectedCategory, setSelectedCategory] = React.useState(null);
+  const [selectedTags, setSelectedTags] = React.useState([]);
+  const [
+    categories,
+    { loading: categoriesLoading, error: categoriesError },
+  ] = useCategories();
+  const [tags, { loading: tagsLoading, error: tagsError }] = useTags();
+  const { register, handleSubmit, setValue, errors } = useForm();
+  const [
+    bookmark,
+    { success: bookmarkSuccess, loading: bookmarkLoading },
+  ] = useBookmark();
 
-  const { register, handleSubmit, control, errors } = useForm();
+  useMetaCrawler((err, meta) => {
+    if (err) {
+      console.error('Failed to get video meta');
+      return;
+    }
 
-  useMetaCrawler({
-    setCurrentURL,
-    setCurrentTitle,
-    setCurrentAuthor,
-    setCurrentDesc,
+    setCurrentURL(meta.url);
+    setCurrentTitle(meta.title);
+    setCurrentAuthor(meta.author);
+    setCurrentContent(meta.description);
+    setCurrentAuthorURL(meta.authorURL);
   });
 
+  const tagNames = tags.map((t) => t.name);
   const onSubmit = (data) => {
-    alert(JSON.stringify(data, null, 2));
-    return false;
+    bookmark(data).then(() => {
+      setSelectedCategory(null);
+      setSelectedTags([]);
+    });
   };
+
+  React.useEffect(() => {
+    register({ name: 'course_category' }, { required: true });
+    register({ name: 'custom_tags' }, { required: true });
+  }, [register]);
 
   return (
     <Container>
@@ -48,10 +74,10 @@ function Main() {
           <InputBlock>
             <TextField
               fullWidth
-              name="url"
-              label="URL"
+              name="youtube_url"
+              label="Youtube URL"
               value={currentURL}
-              inputRef={register}
+              inputRef={register({ required: true })}
               disabled
             />
           </InputBlock>
@@ -59,10 +85,21 @@ function Main() {
           <InputBlock>
             <TextField
               fullWidth
-              name="author"
+              name="author_name"
               label="Author"
               value={currentAuthor}
-              inputRef={register}
+              inputRef={register({ required: true })}
+              disabled
+            />
+          </InputBlock>
+
+          <InputBlock>
+            <TextField
+              fullWidth
+              name="author_url"
+              label="Channel URL"
+              value={currentAuthorURL}
+              inputRef={register({ required: true })}
               disabled
             />
           </InputBlock>
@@ -71,65 +108,80 @@ function Main() {
             <TextField
               fullWidth
               name="title"
-              label="Judul"
+              label="Title"
               value={currentTitle}
-              inputRef={register}
+              inputRef={register({ required: true })}
               disabled
             />
           </InputBlock>
+
+          <textarea
+            fullWidth
+            name="content"
+            label="Content"
+            style={{ display: 'none' }}
+            value={currentContent}
+            ref={register({ required: true })}
+          />
 
           <InputBlock>
-            <TextField
-              fullWidth
-              name="description"
-              label="Description"
-              value={currentDesc}
-              inputRef={register}
-              disabled
+            <FormControl fullWidth>
+              <InputLabel>
+                {categoriesLoading ? 'Loading categories...' : 'Category'}
+              </InputLabel>
+              <Select
+                name="course_category"
+                disabled={categoriesLoading}
+                value={selectedCategory}
+                onChange={({ target }) => {
+                  setValue('course_category', [target.value]);
+                  setSelectedCategory(target.value);
+                }}
+              >
+                {categories.map((c) => {
+                  return (
+                    <MenuItem key={c.id} value={c.id}>
+                      <span
+                        dangerouslySetInnerHTML={{
+                          __html: ''.padStart(c.level, '—') + ` ${c.name}`,
+                        }}
+                      />
+                    </MenuItem>
+                  );
+                })}
+              </Select>
+            </FormControl>
+          </InputBlock>
+          <FormHelperText error>
+            {categoriesError ? 'Failed to fetch categories' : null}
+            {errors.course_category ? 'Category is required' : null}
+          </FormHelperText>
+
+          <InputBlock>
+            <Autocomplete
+              multiple
+              freeSolo
+              options={tagNames}
+              disabled={tagsLoading}
+              value={selectedTags}
+              onChange={(_, value) => {
+                setValue('custom_tags', value);
+                setSelectedTags(value);
+              }}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  variant="standard"
+                  label={categoriesLoading ? 'Loading tags...' : 'Tags'}
+                  placeholder="Pilih tag"
+                />
+              )}
             />
           </InputBlock>
-
-          <Controller
-            as={
-              <InputBlock>
-                <FormControl fullWidth>
-                  <InputLabel>Kategori</InputLabel>
-                  <Select>
-                    <MenuItem value={40}>Makanan</MenuItem>
-                    <MenuItem value={10}>Ojek Online</MenuItem>
-                    <MenuItem value={20}>Kerajinan Rumah Tangga</MenuItem>
-                    <MenuItem value={30}>Pertanian/Perkebunan</MenuItem>
-                  </Select>
-                </FormControl>
-              </InputBlock>
-            }
-            name="category"
-            control={control}
-            defaultValue={10}
-          />
-
-          <Controller
-            as={
-              <InputBlock>
-                <Autocomplete
-                  multiple
-                  options={[{ title: 'keripik singkong' }, { title: 'baju' }]}
-                  getOptionLabel={(option) => option.title}
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      variant="standard"
-                      label="Tags"
-                      placeholder="Pilih tag"
-                    />
-                  )}
-                />
-              </InputBlock>
-            }
-            name="tags"
-            control={control}
-            defaultValue={[{ title: 'keripik singkong' }]}
-          />
+          <FormHelperText error>
+            {tagsError ? 'Failed to fetch tags' : null}
+            {errors.custom_tags ? 'Tags is required' : null}
+          </FormHelperText>
         </div>
         <Button
           fullWidth
@@ -137,12 +189,24 @@ function Main() {
           variant="contained"
           color="primary"
           style={{ marginTop: 16 }}
+          disabled={bookmarkLoading || bookmarkSuccess}
         >
-          Bookmark
+          {bookmarkLoading
+            ? 'Loading...'
+            : bookmarkSuccess
+            ? 'Bookmarked'
+            : 'Bookmark'}
         </Button>
       </Form>
+
+      {bookmarkSuccess ? (
+        <Typography variant="body1" style={{ marginTop: 8, color: 'green' }}>
+          Successfully bookmarked.{' '}
+          <CloseButton onClick={() => window.close()}>Close window</CloseButton>
+        </Typography>
+      ) : null}
     </Container>
   );
-}
+};
 
 export default Main;

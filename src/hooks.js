@@ -9,6 +9,7 @@ import {
   YOUTUBE_DETAIL_PAGE,
   TOKEN_KEY,
 } from './constants';
+import { flatten, groupChildren } from './helpers';
 
 export const useYoutubeChecker = () => {
   const whitelistedURL = [YOUTUBE_DETAIL_PAGE, DEV_PAGE];
@@ -94,12 +95,7 @@ export const useAuth = () => {
   return [isAuthorized, callback, { loading, error }];
 };
 
-export const useMetaCrawler = ({
-  setCurrentURL,
-  setCurrentTitle,
-  setCurrentAuthor,
-  setCurrentDesc,
-}) => {
+export const useMetaCrawler = (callback) => {
   React.useEffect(() => {
     if (CHROME_ENV) {
       chrome.tabs.query(
@@ -109,14 +105,11 @@ export const useMetaCrawler = ({
         },
         (tabs) => {
           const { id: tabId } = tabs[0].url;
-          let url = tabs[0].url;
-
-          setCurrentURL(url);
-
           let code = `(function getAuthorAndDescription() {
             const title = document.querySelectorAll('h1.title > yt-formatted-string')
             const author = document.querySelectorAll('yt-formatted-string.ytd-channel-name > a');
             const content = document.querySelectorAll('yt-formatted-string.content');
+            const authorURL = document.querySelectorAll('#text-container a');
 
             if (title.length === 0) {
               console.error('DOM not found. Failed to get title');
@@ -132,11 +125,18 @@ export const useMetaCrawler = ({
               console.error('DOM not found. Failed to get video description')
               return;
             }
+            
+            if (authorURL.length === 0) {
+              console.error('DOM not found. Failed to get author url')
+              return;
+            }
+            
 
             return {
               title: title[0].innerText,
               author: author[0].innerText,
-              description: content[0].innerText
+              description: content[0].innerText,
+              authorURL: authorURL[0].href
             }
           })()`;
 
@@ -145,16 +145,115 @@ export const useMetaCrawler = ({
             {
               code,
             },
-            function (result) {
+            (result) => {
               if (result.length > 0) {
-                setCurrentTitle(result[0].title);
-                setCurrentAuthor(result[0].author);
-                setCurrentDesc(result[0].description);
+                callback(null, { ...result[0], url: tabs[0].url });
+              } else {
+                callback(Error('No result'), null);
               }
             },
           );
         },
       );
     }
-  }, [setCurrentAuthor, setCurrentDesc, setCurrentTitle, setCurrentURL]);
+  }, [callback]);
+};
+
+export const useCategories = () => {
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState(false);
+  const [categories, setCategories] = React.useState([]);
+
+  React.useEffect(() => {
+    api
+      .get('/wp-json/wp/v2/course_category?per_page=100')
+      .then(({ data: res }) => {
+        const items = res.map((r) => {
+          return {
+            id: r.id,
+            name: r.name,
+            slug: r.slug,
+            parent: r.parent,
+            level: r.level,
+          };
+        });
+        const grouped = groupChildren(items, 0);
+        const flattened = flatten(grouped);
+
+        setCategories(flattened);
+      })
+      .catch((err) => {
+        console.error(err);
+        setError(true);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }, []);
+
+  return [categories, { loading, error }];
+};
+
+export const useTags = () => {
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState(false);
+  const [tags, setTags] = React.useState([]);
+
+  React.useEffect(() => {
+    api
+      .get('/wp-json/wp/v2/course_tag')
+      .then(({ data: res }) => {
+        const tags = res.map((r) => ({
+          id: r.id,
+          name: r.name,
+          slug: r.slug,
+        }));
+        setTags(tags);
+      })
+      .catch(() => {
+        setError(true);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }, []);
+
+  return [tags, { loading, error }];
+};
+
+export const useBookmark = () => {
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState(false);
+  const [success, setSuccess] = React.useState(false);
+
+  const promise = React.useCallback((data) => {
+    setLoading(true);
+    return new Promise((resolve, reject) => {
+      api
+        .post('/wp-json/wp/v2/course', {
+          title: data.title,
+          content: data.content,
+          status: 'publish',
+          custom_fields: {
+            author_url: data.author_url,
+            youtube_url: data.youtube_url,
+            author_name: data.author_name,
+          },
+        })
+        .then(() => {
+          setSuccess(true);
+          resolve();
+        })
+        .catch((err) => {
+          console.error(err);
+          setError(true);
+          reject(err);
+        })
+        .finally(() => {
+          setLoading(false);
+        });
+    });
+  }, []);
+
+  return [promise, { success, loading, error }];
 };

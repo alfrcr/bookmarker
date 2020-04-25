@@ -7,7 +7,7 @@ import {
   FormHelperText,
 } from '@material-ui/core';
 import { useForm } from 'react-hook-form';
-import { Container, Form, InputBlock } from './helpers';
+import { Container, Form, InputBlock } from './components';
 
 const Login = ({ authenticate, state }) => {
   const { register, handleSubmit, errors } = useForm();

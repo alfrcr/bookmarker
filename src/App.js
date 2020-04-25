@@ -3,7 +3,7 @@ import { Typography, Divider } from '@material-ui/core';
 
 import Login from './Login';
 import Main from './Main';
-import { Container } from './helpers';
+import { Container } from './components';
 import { useYoutubeChecker, useAuth } from './hooks';
 
 const Warning = () => (
