@@ -201,7 +201,7 @@ export const useTags = () => {
 
   React.useEffect(() => {
     api
-      .get('/wp-json/wp/v2/course_tag')
+      .get('/wp-json/wp/v2/course_tag?per_page=100')
       .then(({ data: res }) => {
         const tags = res.map((r) => ({
           id: r.id,
