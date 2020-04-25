@@ -233,6 +233,8 @@ export const useBookmark = () => {
         .post('/wp-json/wp/v2/course', {
           title: data.title,
           content: data.content,
+          course_category: data.course_category,
+          custom_tags: data.custom_tags,
           status: 'publish',
           custom_fields: {
             author_url: data.author_url,
