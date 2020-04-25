@@ -143,7 +143,7 @@ const Main = ({ logout }) => {
                     <MenuItem key={c.id} value={c.id}>
                       <span
                         dangerouslySetInnerHTML={{
-                          __html: ''.padStart(c.level, '—') + ` ${c.name}`,
+                          __html: ''.padStart(c.level - 1, '—') + ` ${c.name}`,
                         }}
                       />
                     </MenuItem>
