@@ -119,9 +119,8 @@ export const useMetaCrawler = (callback) => {
           const { id: tabId } = tabs[0].url;
           let code = `(function getAuthorAndDescription() {
             const title = document.querySelectorAll('h1.title > yt-formatted-string')
-            const author = document.querySelectorAll('yt-formatted-string.ytd-channel-name > a');
+            const author = document.querySelectorAll('#upload-info #text-container.ytd-channel-name a');
             const content = document.querySelectorAll('yt-formatted-string.content');
-            const authorURL = document.querySelectorAll('#text-container a');
 
             if (title.length === 0) {
               console.error('DOM not found. Failed to get title');
@@ -137,18 +136,12 @@ export const useMetaCrawler = (callback) => {
               console.error('DOM not found. Failed to get video description')
               return;
             }
-            
-            if (authorURL.length === 0) {
-              console.error('DOM not found. Failed to get author url')
-              return;
-            }
-            
 
             return {
               title: title[0].innerText,
               author: author[0].innerText,
               description: content[0].innerText,
-              authorURL: authorURL[0].href
+              authorURL: author[0].href
             }
           })()`;
 
